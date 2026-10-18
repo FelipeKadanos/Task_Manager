@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Contracts;
 using TaskManager.Api.Data;
 using TaskManager.Api.Models;
+using TaskManager.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var conexao = new SqliteConnectionStringBuilder {
@@ -134,6 +135,90 @@ app.MapDelete("/categorias/{id:int}", async (int id, AppDataContext db) => {
     return Results.NoContent();
 });
 
-// MARCOS: inserir endpoints de tarefas aqui, antes de app.Run().
+app.MapGet("/tarefas", async (
+    StatusTarefa? status, PrioridadeTarefa? prioridade,
+    int? categoriaId, int? projetoId,
+    DateOnly? vencimentoDe, DateOnly? vencimentoAte,
+    bool? atrasadas, AppDataContext db) =>
+{
+    if (status is { } s && !Enum.IsDefined(s))
+        return Results.BadRequest("Status inválido.");
+    if (prioridade is { } p && !Enum.IsDefined(p))
+        return Results.BadRequest("Prioridade inválida.");
+    if (categoriaId <= 0 || projetoId <= 0)
+        return Results.BadRequest("IDs dos filtros devem ser positivos.");
+    if (vencimentoDe.HasValue && vencimentoAte.HasValue &&
+        vencimentoDe.Value > vencimentoAte.Value)
+        return Results.BadRequest("Intervalo de vencimento invertido.");
+
+    var hoje = RegrasTarefa.HojeEmSaoPaulo();
+    var consulta = db.Tarefas.AsNoTracking().AsQueryable();
+    if (status.HasValue) consulta = consulta.Where(t => t.Status == status.Value);
+    if (prioridade.HasValue)
+        consulta = consulta.Where(t => t.Prioridade == prioridade.Value);
+    if (categoriaId.HasValue)
+        consulta = consulta.Where(t => t.CategoriaId == categoriaId.Value);
+    if (projetoId.HasValue)
+        consulta = consulta.Where(t => t.ProjetoId == projetoId.Value);
+    if (vencimentoDe.HasValue)
+        consulta = consulta.Where(t => t.DataVencimento >= vencimentoDe.Value);
+    if (vencimentoAte.HasValue)
+        consulta = consulta.Where(t => t.DataVencimento <= vencimentoAte.Value);
+    if (atrasadas == true)
+        consulta = consulta.Where(t => t.DataVencimento != null &&
+            t.DataVencimento < hoje && t.Status != StatusTarefa.Concluida);
+    else if (atrasadas == false)
+        consulta = consulta.Where(t => t.DataVencimento == null ||
+            t.DataVencimento >= hoje || t.Status == StatusTarefa.Concluida);
+
+    var tarefas = await consulta.OrderBy(t => t.Id).ToListAsync();
+    return Results.Ok(tarefas.Select(t => RegrasTarefa.Resposta(t, hoje)));
+});
+
+app.MapGet("/tarefas/{id:int}", async (int id, AppDataContext db) =>
+{
+    var tarefa = await db.Tarefas.FindAsync(id);
+    return tarefa is null ? Results.NotFound() :
+        Results.Ok(RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
+});
+
+app.MapPost("/tarefas", async (TarefaRequest body, AppDataContext db) =>
+{
+    var erro = await RegrasTarefa.ValidarAsync(body, db, false);
+    if (erro is not null) return Results.BadRequest(erro);
+    var tarefa = new Tarefa { CriadaEmUtc = DateTime.UtcNow };
+    RegrasTarefa.Preencher(tarefa, body);
+    db.Tarefas.Add(tarefa);
+    try { await db.SaveChangesAsync(); }
+    catch (DbUpdateException ex) when
+        (ex.InnerException is SqliteException { SqliteExtendedErrorCode: 787 })
+    { return Results.BadRequest("Categoria ou projeto deixou de existir."); }
+    return Results.Created($"/tarefas/{tarefa.Id}",
+        RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
+});
+
+app.MapPut("/tarefas/{id:int}", async (
+    int id, TarefaRequest body, AppDataContext db) =>
+{
+    var tarefa = await db.Tarefas.FindAsync(id);
+    if (tarefa is null) return Results.NotFound();
+    var erro = await RegrasTarefa.ValidarAsync(body, db, true);
+    if (erro is not null) return Results.BadRequest(erro);
+    RegrasTarefa.Preencher(tarefa, body);
+    try { await db.SaveChangesAsync(); }
+    catch (DbUpdateException ex) when
+        (ex.InnerException is SqliteException { SqliteExtendedErrorCode: 787 })
+    { return Results.BadRequest("Categoria ou projeto deixou de existir."); }
+    return Results.Ok(RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
+});
+
+app.MapDelete("/tarefas/{id:int}", async (int id, AppDataContext db) =>
+{
+    var tarefa = await db.Tarefas.FindAsync(id);
+    if (tarefa is null) return Results.NotFound();
+    db.Tarefas.Remove(tarefa);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 
 app.Run();
