@@ -7,108 +7,100 @@ using TaskManager.Api.Data;
 
 #nullable disable
 
-namespace TaskManager.Api.Migrations
-{
+namespace TaskManager.Api.Migrations {
     [DbContext(typeof(AppDataContext))]
-    partial class AppDataContextModelSnapshot : ModelSnapshot
-    {
-        protected override void BuildModel(ModelBuilder modelBuilder)
-        {
+    partial class AppDataContextModelSnapshot : ModelSnapshot {
+        protected override void BuildModel(ModelBuilder modelBuilder) {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.32");
 
-            modelBuilder.Entity("TaskManager.Api.Models.Categoria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+            modelBuilder.Entity("TaskManager.Api.Models.Categoria", b => {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
 
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                b.Property<string>("Nome")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("Categorias");
+                b.ToTable("Categorias");
+            });
+
+            modelBuilder.Entity("TaskManager.Api.Models.Projeto", b => {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Nome")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.ToTable("Projetos");
+            });
+
+            modelBuilder.Entity("TaskManager.Api.Models.Tarefa", b => {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("CategoriaId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<DateTime>("CriadaEmUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<DateOnly?>("DataVencimento")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Descricao")
+                    .HasMaxLength(2000)
+                    .HasColumnType("TEXT");
+
+                b.Property<int>("Prioridade")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int?>("ProjetoId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("Status")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Titulo")
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CategoriaId");
+
+                b.HasIndex("ProjetoId");
+
+                b.ToTable("Tarefas", null, t => {
+                    t.HasCheckConstraint("CK_Tarefas_Prioridade", "Prioridade IN (0, 1, 2)");
+
+                    t.HasCheckConstraint("CK_Tarefas_Status", "Status IN (0, 1, 2)");
                 });
+            });
 
-            modelBuilder.Entity("TaskManager.Api.Models.Projeto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+            modelBuilder.Entity("TaskManager.Api.Models.Tarefa", b => {
+                b.HasOne("TaskManager.Api.Models.Categoria", null)
+                    .WithMany()
+                    .HasForeignKey("CategoriaId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Projetos");
-                });
-
-            modelBuilder.Entity("TaskManager.Api.Models.Tarefa", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CategoriaId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CriadaEmUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("DataVencimento")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Prioridade")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("ProjetoId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaId");
-
-                    b.HasIndex("ProjetoId");
-
-                    b.ToTable("Tarefas", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Tarefas_Prioridade", "Prioridade IN (0, 1, 2)");
-
-                            t.HasCheckConstraint("CK_Tarefas_Status", "Status IN (0, 1, 2)");
-                        });
-                });
-
-            modelBuilder.Entity("TaskManager.Api.Models.Tarefa", b =>
-                {
-                    b.HasOne("TaskManager.Api.Models.Categoria", null)
-                        .WithMany()
-                        .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TaskManager.Api.Models.Projeto", null)
-                        .WithMany()
-                        .HasForeignKey("ProjetoId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
+                b.HasOne("TaskManager.Api.Models.Projeto", null)
+                    .WithMany()
+                    .HasForeignKey("ProjetoId")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 #pragma warning restore 612, 618
         }
     }

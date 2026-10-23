@@ -3,10 +3,13 @@ using TaskManager.Api.Models;
 
 namespace TaskManager.Api.Data;
 
-public class AppDataContext(DbContextOptions<AppDataContext> options) : DbContext(options) {
-    public DbSet<Projeto> Projetos => Set<Projeto>();
-    public DbSet<Categoria> Categorias => Set<Categoria>();
-    public DbSet<Tarefa> Tarefas => Set<Tarefa>();
+public class AppDataContext : DbContext {
+    public AppDataContext(DbContextOptions<AppDataContext> options) : base(options) {
+    }
+
+    public DbSet<Projeto> Projetos { get; set; }
+    public DbSet<Categoria> Categorias { get; set; }
+    public DbSet<Tarefa> Tarefas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.Entity<Projeto>().Property(p => p.Nome).IsRequired().HasMaxLength(100);
@@ -23,7 +26,7 @@ public class AppDataContext(DbContextOptions<AppDataContext> options) : DbContex
 
         tarefa.HasOne<Categoria>().WithMany().HasForeignKey(t => t.CategoriaId).OnDelete(DeleteBehavior.Restrict);
         tarefa.HasOne<Projeto>().WithMany().HasForeignKey(t => t.ProjetoId).OnDelete(DeleteBehavior.Restrict);
-        
+
         tarefa.ToTable("Tarefas", tabela => {
             tabela.HasCheckConstraint("CK_Tarefas_Status", "Status IN (0, 1, 2)");
             tabela.HasCheckConstraint("CK_Tarefas_Prioridade", "Prioridade IN (0, 1, 2)");

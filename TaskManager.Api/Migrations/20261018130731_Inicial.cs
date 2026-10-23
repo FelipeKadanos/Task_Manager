@@ -3,44 +3,36 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace TaskManager.Api.Migrations
-{
+namespace TaskManager.Api.Migrations {
     /// <inheritdoc />
-    public partial class Inicial : Migration
-    {
+    public partial class Inicial : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "Categorias",
-                columns: table => new
-                {
+                columns: table => new {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Nome = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_Categorias", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "Projetos",
-                columns: table => new
-                {
+                columns: table => new {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Nome = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_Projetos", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "Tarefas",
-                columns: table => new
-                {
+                columns: table => new {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Titulo = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
@@ -52,8 +44,7 @@ namespace TaskManager.Api.Migrations
                     CategoriaId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProjetoId = table.Column<int>(type: "INTEGER", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_Tarefas", x => x.Id);
                     table.CheckConstraint("CK_Tarefas_Prioridade", "Prioridade IN (0, 1, 2)");
                     table.CheckConstraint("CK_Tarefas_Status", "Status IN (0, 1, 2)");
@@ -83,8 +74,7 @@ namespace TaskManager.Api.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "Tarefas");
 
