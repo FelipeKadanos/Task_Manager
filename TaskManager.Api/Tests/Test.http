@@ -1,0 +1,37 @@
+# Testes manuais: extensão REST Client do VS Code.
+# EXECUTE NA ORDEM.
+
+# Os IDs são capturados das respostas. Os registros são excluídos ao final.
+# Troque execucao se uma execução anterior foi interrompida.
+
+
+@baseUrl = http://localhost:5000
+@execucao = teste-001
+
+### Raiz - esperado: 200
+GET {{baseUrl}}/
+
+### Cadastrar projeto - esperado: 201
+# @name projeto
+POST {{baseUrl}}/api/projetos
+Content-Type: application/json
+
+{"nome":"projeto {{execucao}}"}
+
+### Cadastrar outroProjeto - esperado: 201
+# @name outroProjeto
+POST {{baseUrl}}/api/projetos
+Content-Type: application/json
+
+{"nome":"outroProjeto {{execucao}}"}
+
+### Cadastrar categoria - esperado: 201
+# @name categoria
+POST {{baseUrl}}/api/categorias
+Content-Type: application/json
+
+{"nome":"categoria {{execucao}}"}
+
+### Resumo vazio - esperado: todas as contagens e percentual zero
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}/resumo
+
