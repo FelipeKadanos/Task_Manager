@@ -35,3 +35,339 @@ Content-Type: application/json
 ### Resumo vazio - esperado: todas as contagens e percentual zero
 GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}/resumo
 
+### Alterar projeto - esperado: 200
+PUT {{baseUrl}}/api/projetos
+Content-Type: application/json
+
+{"id":{{projeto.response.body.$.id}},"nome":"projeto atualizado {{execucao}}"}
+
+### Conferir nome atualizado - esperado: 200
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}
+
+### Listar projetos - esperado: 200
+GET {{baseUrl}}/api/projetos
+
+### Alterar categoria - esperado: 200
+PUT {{baseUrl}}/api/categorias
+Content-Type: application/json
+
+{"id":{{categoria.response.body.$.id}},"nome":"categoria atualizado {{execucao}}"}
+
+### Conferir nome atualizado - esperado: 200
+GET {{baseUrl}}/api/categorias/{{categoria.response.body.$.id}}
+
+### Listar categorias - esperado: 200
+GET {{baseUrl}}/api/categorias
+
+### Cadastrar tarefa - esperado: 201
+# @name tarefa
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "titulo": "tarefa {{execucao}}",
+    "descricao": "Descrição de teste",
+    "status": 0,
+    "prioridade": 0,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-01",
+    "categoriaId": {{categoria.response.body.$.id}},
+    "projetoId": {{projeto.response.body.$.id}}
+}
+
+### Cadastrar segunda - esperado: 201
+# @name segunda
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "titulo": "segunda {{execucao}}",
+    "descricao": "Descrição de teste",
+    "status": 1,
+    "prioridade": 1,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-01",
+    "categoriaId": {{categoria.response.body.$.id}},
+    "projetoId": {{projeto.response.body.$.id}}
+}
+
+### Cadastrar terceira - esperado: 201
+# @name terceira
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "titulo": "terceira {{execucao}}",
+    "descricao": "Descrição de teste",
+    "status": 2,
+    "prioridade": 2,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-01",
+    "categoriaId": {{categoria.response.body.$.id}},
+    "projetoId": {{projeto.response.body.$.id}}
+}
+
+### Cadastrar externa - esperado: 201
+# @name externa
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "titulo": "externa {{execucao}}",
+    "descricao": "Descrição de teste",
+    "status": 2,
+    "prioridade": 2,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-01",
+    "categoriaId": {{categoria.response.body.$.id}},
+    "projetoId": {{outroProjeto.response.body.$.id}}
+}
+
+### Cadastrar semProjeto - esperado: 201
+# @name semProjeto
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "titulo": "semProjeto {{execucao}}",
+    "descricao": "Descrição de teste",
+    "status": 2,
+    "prioridade": 2,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-01",
+    "categoriaId": null,
+    "projetoId": null
+}
+
+### Consultar tarefa - esperado: categoria e projeto com nomes atualizados
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Listar tarefas - esperado: 200
+GET {{baseUrl}}/api/tarefas
+
+### Resumo - total 3, pendentes 1, em andamento 1, concluídas 1, alta prioridade 1, percentual 33.33; excluir tarefas externas e sem projeto
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}/resumo
+
+### Alterar tarefa - esperado: 200
+PUT {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{
+    "id": {{tarefa.response.body.$.id}},
+    "titulo": "Tarefa atualizada {{execucao}}",
+    "descricao": "Descrição atualizada",
+    "status": 0,
+    "prioridade": 0,
+    "criacao": "2026-10-25T10:00:00",
+    "vencimento": "2026-11-02",
+    "categoriaId": {{categoria.response.body.$.id}},
+    "projetoId": {{projeto.response.body.$.id}}
+}
+
+### Conferir título, descrição e vencimento atualizados
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar status para 0 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+0
+
+### Conferir status e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar status para 1 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+1
+
+### Conferir status e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar status para 2 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+2
+
+### Conferir status e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar status para 2 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+2
+
+### Conferir status e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### status: enum inválido - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+99
+
+### status: corpo nulo - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+null
+
+### status: JSON malformado - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+
+### status: corpo ausente - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+
+
+### status: ID inválido - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/0/status
+Content-Type: application/json
+
+1
+
+### Atualizar prioridade para 0 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+0
+
+### Conferir prioridade e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar prioridade para 1 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+1
+
+### Conferir prioridade e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar prioridade para 2 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+2
+
+### Conferir prioridade e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Atualizar prioridade para 2 - esperado: 200; repetir valor é permitido
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+2
+
+### Conferir prioridade e preservação de todos os demais campos em relação ao GET anterior
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### prioridade: enum inválido - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+99
+
+### prioridade: corpo nulo - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+null
+
+### prioridade: JSON malformado - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+{
+
+### prioridade: corpo ausente - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+
+
+### prioridade: ID inválido - esperado: 400
+PATCH {{baseUrl}}/api/tarefas/0/prioridade
+Content-Type: application/json
+
+1
+
+### Resumo após PATCH - total 3, pendentes 0, em andamento 1, concluídas 2, alta prioridade 2, percentual 66.67
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}/resumo
+
+### Resumo: ID inválido - esperado: 400
+GET {{baseUrl}}/api/projetos/0/resumo
+
+### Título vazio - esperado: 400
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{"titulo":""}
+
+### Relacionamentos inválidos - esperado: 400
+POST {{baseUrl}}/api/tarefas
+Content-Type: application/json
+
+{"titulo":"Inválida {{execucao}}","categoriaId":-1,"projetoId":-1}
+
+### Excluir categoria vinculado - esperado: 200
+DELETE {{baseUrl}}/api/categorias/{{categoria.response.body.$.id}}
+
+### Conferir SetNull: categoriaId e categoria nulos; tarefa continua existindo
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Consultar registro excluído - esperado: 404
+GET {{baseUrl}}/api/categorias/{{categoria.response.body.$.id}}
+
+### Excluir projeto vinculado - esperado: 200
+DELETE {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}
+
+### Conferir SetNull: projetoId e projeto nulos; tarefa continua existindo
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Consultar registro excluído - esperado: 404
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}
+
+### Resumo de projeto inexistente - esperado: 404
+GET {{baseUrl}}/api/projetos/{{projeto.response.body.$.id}}/resumo
+
+### Excluir tarefa - esperado: 200
+DELETE {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### Excluir segunda - esperado: 200
+DELETE {{baseUrl}}/api/tarefas/{{segunda.response.body.$.id}}
+
+### Excluir terceira - esperado: 200
+DELETE {{baseUrl}}/api/tarefas/{{terceira.response.body.$.id}}
+
+### Excluir externa - esperado: 200
+DELETE {{baseUrl}}/api/tarefas/{{externa.response.body.$.id}}
+
+### Excluir semProjeto - esperado: 200
+DELETE {{baseUrl}}/api/tarefas/{{semProjeto.response.body.$.id}}
+
+### Consultar tarefa excluída - esperado: 404
+GET {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}
+
+### status de tarefa inexistente - esperado: 400, "Tarefa não encontrada!"
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/status
+Content-Type: application/json
+
+1
+
+### prioridade de tarefa inexistente - esperado: 400, "Tarefa não encontrada!"
+PATCH {{baseUrl}}/api/tarefas/{{tarefa.response.body.$.id}}/prioridade
+Content-Type: application/json
+
+1
+
+### Excluir outro projeto - esperado: 200
+DELETE {{baseUrl}}/api/projetos/{{outroProjeto.response.body.$.id}}
+

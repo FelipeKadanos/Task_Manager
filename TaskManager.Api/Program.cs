@@ -41,6 +41,48 @@ app.MapGet("/api/projetos", ([FromServices] AppDataContext ctx) => {
 });
 
 
+/* Mostra um resumo de um projeto.
+ * Busca tarefas do projeto, conta as tarefas por status e prioridade e calcula o percentual de conclusão.
+ */
+// GET: http://localhost:5000/api/projetos/{id}/resumo
+app.MapGet("/api/projetos/{id}/resumo", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+
+    if (id <= 0) { return Results.BadRequest("Id do projeto inválido."); }
+
+    // Expressão lambda
+    Projeto? projetoEncontrado = ctx.Projetos.FirstOrDefault(x => x.Id == id);
+    if (projetoEncontrado is null) {
+        return Results.NotFound("Projeto não encontrado.");
+    }
+
+    // Busca somente as tarefas vinculadas ao projeto informado
+    var tarefas = ctx.Tarefas.Where(x => x.ProjetoId == id).ToList();
+
+    // Calculamos a quantidade de tarefas por status e prioridade
+    var totalTarefas = tarefas.Count;
+    var pendentes = tarefas.Count(x => x.Status == StatusTarefa.Pendente);
+    var emAndamento = tarefas.Count(x => x.Status == StatusTarefa.EmAndamento);
+    var concluidas = tarefas.Count(x => x.Status == StatusTarefa.Concluida);
+    var altaPrioridade = tarefas.Count(x => x.Prioridade == PrioridadeTarefa.Alta);
+
+    // Calculamos o percentual de tarefas concluídas
+    var percentualConclusao = totalTarefas == 0
+        ? 0
+        : Math.Round(concluidas * 100.0 / totalTarefas, 2);
+
+    return Results.Ok(new {
+        projetoId = projetoEncontrado.Id,
+        projetoNome = projetoEncontrado.Nome,
+        totalTarefas,
+        pendentes,
+        emAndamento,
+        concluidas,
+        altaPrioridade,
+        percentualConclusao
+    });
+});
+
+
 // POST: http://localhost:5000/api/projetos
 app.MapPost("/api/projetos", ([FromBody] Projeto? pjt, [FromServices] AppDataContext ctx) => {
     
@@ -506,5 +548,111 @@ app.MapDelete("/api/tarefas/{id}", ([FromRoute] int id, [FromServices] AppDataCo
 
     return Results.Ok("Tarefa removida com sucesso!");
 });
+
+
+
+
+// ============================================================================================
+// Atualizando Status
+// ============================================================================================
+
+
+
+
+// PATCH: http://localhost:5000/api/tarefas/{id}/status
+app.MapPatch("/api/tarefas/{id}/status", ([FromRoute] int id, [FromBody] StatusTarefa? status, [FromServices] AppDataContext ctx) => {
+    
+    if (id <= 0) { return Results.BadRequest("Id da tarefa não enviado."); }
+    if (status is null) { return Results.BadRequest("Status não enviado."); }
+
+    // Validações do status a ser atualizado
+    var erros = new Dictionary<string, string[]>();
+
+    if (!Enum.IsDefined(typeof(StatusTarefa), status.Value)) {
+        erros.Add("Status", ["Status inválido."]);
+    }
+
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
+    }
+
+    // Expressão lambda
+    Tarefa? tarefaEncontrada = ctx.Tarefas.FirstOrDefault(x => x.Id == id);
+    if (tarefaEncontrada is null) {
+        return Results.BadRequest("Tarefa não encontrada!");
+    }
+
+    tarefaEncontrada.Status = status.Value;
+
+    // Tentamos salvar o status da tarefa no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar o status da tarefa: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Status atualizado com sucesso!");
+});
+
+
+
+
+// ============================================================================================
+// Atualizando Prioridade
+// ============================================================================================
+
+
+
+// PATCH: http://localhost:5000/api/tarefas/{id}/prioridade
+app.MapPatch("/api/tarefas/{id}/prioridade", ([FromRoute] int id, [FromBody] PrioridadeTarefa? prioridade, [FromServices] AppDataContext ctx) => {
+    
+    if (id <= 0) { return Results.BadRequest("Id da tarefa não enviado."); }
+    if (prioridade is null) { return Results.BadRequest("Prioridade não enviada."); }
+
+    // Validações da prioridade a ser atualizada
+    var erros = new Dictionary<string, string[]>();
+
+    if (!Enum.IsDefined(typeof(PrioridadeTarefa), prioridade.Value)) {
+        erros.Add("Prioridade", ["Prioridade inválida."]);
+    }
+
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
+    }
+
+    // Expressão lambda
+    Tarefa? tarefaEncontrada = ctx.Tarefas.FirstOrDefault(x => x.Id == id);
+    if (tarefaEncontrada is null) {
+        return Results.BadRequest("Tarefa não encontrada!");
+    }
+
+    tarefaEncontrada.Prioridade = prioridade.Value;
+
+    // Tentamos salvar a prioridade da tarefa no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar a prioridade da tarefa: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Prioridade atualizada com sucesso!");
+});
+
+
+
 
 app.Run();
