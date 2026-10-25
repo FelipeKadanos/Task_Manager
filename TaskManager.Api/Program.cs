@@ -1,280 +1,510 @@
-using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TaskManager.Api.Contracts;
-using TaskManager.Api.Data;
-using TaskManager.Api.Models;
-using TaskManager.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-var conexao = new SqliteConnectionStringBuilder {
-    DataSource = Path.Combine(builder.Environment.ContentRootPath, "taskmanager.db"),
-    ForeignKeys = true
-}.ToString();
-
-builder.Services.AddDbContext<AppDataContext>(op => op.UseSqlite(conexao));
-
+builder.Services.AddDbContext<AppDataContext>(); // Carrega o contexto de dados para o banco de dados
 var app = builder.Build();
 
-// GET /
-app.MapGet("/", () => Results.Ok(new { nome = "Task Manager API" }));
+// GET: http://localhost:5000/
+app.MapGet("/", () => "Bem-vindo a TaskManager API!");
 
-// GET /projetos
-app.MapGet("/projetos", (AppDataContext contexto) => {
-    return Results.Ok(contexto.Projetos.AsNoTracking().OrderBy(p => p.Id).ToList());
-});
 
-// GET /projetos/{id:int}
-app.MapGet("/projetos/{id:int}", (int id, AppDataContext contexto) => {
-    var projeto = contexto.Projetos.Find(id);
+
+
+// ============================================================================================
+// Projetos
+// ============================================================================================
+
+
+
+
+// GET: http://localhost:5000/api/projetos
+app.MapGet("/api/projetos/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+
+    var projeto = ctx.Projetos.Find(id);
     if (projeto == null) {
-        return Results.NotFound();
-    }
-
+        return Results.NotFound("Projeto não encontrado.");
+    }    
+    
     return Results.Ok(projeto);
 });
 
-// POST /projetos
-app.MapPost("/projetos", (NomeRequest dados, AppDataContext contexto) => {
-    if (string.IsNullOrWhiteSpace(dados.Nome) || dados.Nome.Trim().Length > 100) {
-        return Results.BadRequest("Nome é obrigatório e deve ter até 100 caracteres.");
-    }
+// GET: http://localhost:5000/api/projetos
+app.MapGet("/api/projetos", ([FromServices] AppDataContext ctx) => {
 
-    var projeto = new Projeto { Nome = dados.Nome.Trim() };
-    contexto.Projetos.Add(projeto);
-
-    contexto.SaveChanges();
-    return Results.Created($"/projetos/{projeto.Id}", projeto);
-});
-
-// PUT /projetos/{id:int}
-app.MapPut("/projetos/{id:int}", (int id, NomeRequest dados, AppDataContext contexto) => {
-    var projeto = contexto.Projetos.Find(id);
-
+    var projeto = ctx.Projetos.ToList();
     if (projeto == null) {
-        return Results.NotFound();
-    }
-
-    if (string.IsNullOrWhiteSpace(dados.Nome) || dados.Nome.Trim().Length > 100) {
-        return Results.BadRequest("Nome é obrigatório e deve ter até 100 caracteres.");
-    }
-
-    projeto.Nome = dados.Nome.Trim();
-    contexto.SaveChanges();
-
+        return Results.NotFound("Nenhum projeto registrado.");
+    }    
+    
     return Results.Ok(projeto);
 });
 
-// DELETE /projetos/{id:int}
-app.MapDelete("/projetos/{id:int}", (int id, AppDataContext contexto) => {
-    var projeto = contexto.Projetos.Find(id);
 
-    if (projeto == null) {
-        return Results.NotFound();
+// POST: http://localhost:5000/api/projetos
+app.MapPost("/api/projetos", ([FromBody] Projeto? pjt, [FromServices] AppDataContext ctx) => {
+    
+    if (pjt is null) { return Results.BadRequest("Projeto não enviado."); }
+
+    // Validações do projeto a ser adicionada
+    var erros = new Dictionary<string, string[]>();
+
+    if (string.IsNullOrWhiteSpace(pjt.Nome) || pjt.Nome.Trim().Length > 150) {
+        erros.Add("Nome", ["Nome é obrigatório e deve ter até 150 caracteres."]);
     }
 
-    if (contexto.Tarefas.Any(t => t.ProjetoId == id)) {
-        return Results.Conflict("Projeto possui tarefas vinculadas.");
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
     }
 
-    contexto.Projetos.Remove(projeto);
+    // Expressão lambda
+    Projeto? projetoEncontrado = ctx.Projetos.FirstOrDefault(x => x.Nome == pjt.Nome);
+    if (projetoEncontrado is not null) {
+        return Results.BadRequest("Esse projeto já existe!");
+    }
 
+    ctx.Projetos.Add(pjt);
+
+    // Tentamos salvar o projeto no banco, 
     try {
-        contexto.SaveChanges();
-    }
-    catch (DbUpdateException ex) when (ex.InnerException is SqliteException sqlite &&
-        (sqlite.SqliteExtendedErrorCode == 787 || sqlite.SqliteExtendedErrorCode == 1811)) {
-        return Results.Conflict("Projeto possui tarefas vinculadas.");
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar o projeto: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
     }
 
-    return Results.NoContent();
+    // O Entity Framework Core atualiza o objeto pjt com o Id gerado pelo banco
+    return Results.Created($"/api/projetos/{pjt.Id}", pjt);
 });
 
-// GET /categorias
-app.MapGet("/categorias", (AppDataContext contexto) => {
-    return Results.Ok(contexto.Categorias.AsNoTracking().OrderBy(c => c.Id).ToList());
+
+// PUT: http://localhost:5000/api/projetos
+app.MapPut("/api/projetos", ([FromBody] Projeto? pjt, [FromServices] AppDataContext ctx) => {
+    
+    if (pjt is null) { return Results.BadRequest("Projeto não enviada."); }
+
+    // Validações do projeto a ser atualizada
+    var erros = new Dictionary<string, string[]>();
+
+    if (string.IsNullOrWhiteSpace(pjt.Id.ToString()) || pjt.Id <= 0) {
+        erros.Add("Id", ["Id é obrigatório e deve ser um número positivo."]);
+    }
+    if (string.IsNullOrWhiteSpace(pjt.Nome) || pjt.Nome.Trim().Length > 150) {
+        erros.Add("Nome", ["Nome é obrigatório e deve ter até 150 caracteres."]);
+    }
+
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
+    }
+
+    // Expressão lambda
+    Projeto? projetoEncontrado = ctx.Projetos.FirstOrDefault(x => x.Id == pjt.Id);
+    if (projetoEncontrado is null) {
+        return Results.BadRequest("Projeto não encontrado!");
+    }
+
+    // Atualizamos os dados do projeto encontrado
+    projetoEncontrado.Nome = pjt.Nome;
+
+    // Tentamos salvar o projeto no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar o projeto: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Projeto atualizada com sucesso!");
 });
 
-// GET /categorias/{id:int}
-app.MapGet("/categorias/{id:int}", (int id, AppDataContext contexto) => {
-    var categoria = contexto.Categorias.Find(id);
 
+// DELETE: http://localhost:5000/api/projetos
+app.MapDelete("/api/projetos/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+    
+    if (id <= 0) { return Results.BadRequest("Id da projeto não enviado."); }
+
+    // Expressão lambda
+    Projeto? projetoEncontrado = ctx.Projetos.FirstOrDefault(x => x.Id == id);
+    if (projetoEncontrado is null) {
+        return Results.BadRequest("Projeto não encontrado!");
+    }
+
+    ctx.Projetos.Remove(projetoEncontrado);
+
+    // Tentamos salvar o projeto no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao remover o projeto: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Projeto removido com sucesso!");
+});
+
+
+
+
+// ============================================================================================
+// Categorias
+// ============================================================================================
+
+
+
+
+// GET: http://localhost:5000/api/categorias
+app.MapGet("/api/categorias/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+
+    var categoria = ctx.Categorias.Find(id);
     if (categoria == null) {
-        return Results.NotFound();
-    }
-
+        return Results.NotFound("Categoria não encontrada.");
+    }    
+    
     return Results.Ok(categoria);
 });
 
-// POST /categorias
-app.MapPost("/categorias", (NomeRequest dados, AppDataContext contexto) => {
-    if (string.IsNullOrWhiteSpace(dados.Nome) || dados.Nome.Trim().Length > 100) {
-        return Results.BadRequest("Nome é obrigatório e deve ter até 100 caracteres.");
-    }
 
-    var categoria = new Categoria { Nome = dados.Nome.Trim() };
-    contexto.Categorias.Add(categoria);
-    contexto.SaveChanges();
+// GET: http://localhost:5000/api/categorias
+app.MapGet("/api/categorias", ([FromServices] AppDataContext ctx) => {
 
-    return Results.Created($"/categorias/{categoria.Id}", categoria);
-});
-
-// PUT /categorias/{id:int}
-app.MapPut("/categorias/{id:int}", (int id, NomeRequest dados, AppDataContext contexto) => {
-    var categoria = contexto.Categorias.Find(id);
-
+    var categoria = ctx.Categorias.ToList();
     if (categoria == null) {
-        return Results.NotFound();
-    }
-
-    if (string.IsNullOrWhiteSpace(dados.Nome) || dados.Nome.Trim().Length > 100) {
-        return Results.BadRequest("Nome é obrigatório e deve ter até 100 caracteres.");
-    }
-
-    categoria.Nome = dados.Nome.Trim();
-    contexto.SaveChanges();
-
+        return Results.NotFound("Nenhuma categoria registrada.");
+    }    
+    
     return Results.Ok(categoria);
 });
 
-// DELETE /categorias/{id:int}
-app.MapDelete("/categorias/{id:int}", (int id, AppDataContext contexto) => {
-    var categoria = contexto.Categorias.Find(id);
 
-    if (categoria == null) {
-        return Results.NotFound();
+// POST: http://localhost:5000/api/categorias
+app.MapPost("/api/categorias", ([FromBody] Categoria? cat, [FromServices] AppDataContext ctx) => {
+    
+    if (cat is null) { return Results.BadRequest("Categoria não enviada."); }
+
+    // Validações da categoria a ser adicionada
+    var erros = new Dictionary<string, string[]>();
+
+    if (string.IsNullOrWhiteSpace(cat.Nome) || cat.Nome.Trim().Length > 150) {
+        erros.Add("Nome", ["Nome é obrigatório e deve ter até 150 caracteres."]);
     }
 
-    if (contexto.Tarefas.Any(t => t.CategoriaId == id)) {
-        return Results.Conflict("Categoria possui tarefas vinculadas.");
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
     }
 
-    contexto.Categorias.Remove(categoria);
+    // Expressão lambda
+    Categoria? categoriaEncontrado = ctx.Categorias.FirstOrDefault(x => x.Nome == cat.Nome);
+    if (categoriaEncontrado is not null) {
+        return Results.BadRequest("Esse categoria já existe!");
+    }
 
+    ctx.Categorias.Add(cat);
+
+    // Tentamos salvar a categoria no banco, 
     try {
-        contexto.SaveChanges();
-    }
-    catch (DbUpdateException ex) when (ex.InnerException is SqliteException sqlite &&
-        (sqlite.SqliteExtendedErrorCode == 787 || sqlite.SqliteExtendedErrorCode == 1811)) {
-        return Results.Conflict("Categoria possui tarefas vinculadas.");
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar a categoria: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
     }
 
-    return Results.NoContent();
+    // O Entity Framework Core atualiza o objeto cat com o Id gerado pelo banco
+    return Results.Created($"/api/categorias/{cat.Id}", cat);
 });
 
-// GET /tarefas
-app.MapGet("/tarefas", (
-    StatusTarefa? status, PrioridadeTarefa? prioridade,
-    int? categoriaId, int? projetoId,
-    DateOnly? vencimentoDe, DateOnly? vencimentoAte,
-    bool? atrasadas, AppDataContext contexto) => {
-        if (status.HasValue && !Enum.IsDefined(status.Value)) {
-            return Results.BadRequest("Status inválido.");
-        }
-        if (prioridade.HasValue && !Enum.IsDefined(prioridade.Value)) {
-            return Results.BadRequest("Prioridade inválida.");
-        }
-        if (categoriaId <= 0 || projetoId <= 0) {
-            return Results.BadRequest("IDs dos filtros devem ser positivos.");
-        }
-        if (vencimentoDe.HasValue && vencimentoAte.HasValue &&
-            vencimentoDe.Value > vencimentoAte.Value) {
-            return Results.BadRequest("Intervalo de vencimento invertido.");
-        }
 
-        var hoje = RegrasTarefa.HojeEmSaoPaulo();
-        var consulta = contexto.Tarefas.AsNoTracking();
-        if (status.HasValue) {
-            consulta = consulta.Where(t => t.Status == status.Value);
-        }
-        if (prioridade.HasValue) {
-            consulta = consulta.Where(t => t.Prioridade == prioridade.Value);
-        }
-        if (categoriaId.HasValue) {
-            consulta = consulta.Where(t => t.CategoriaId == categoriaId.Value);
-        }
-        if (projetoId.HasValue) {
-            consulta = consulta.Where(t => t.ProjetoId == projetoId.Value);
-        }
-        if (vencimentoDe.HasValue) {
-            consulta = consulta.Where(t => t.DataVencimento >= vencimentoDe.Value);
-        }
-        if (vencimentoAte.HasValue) {
-            consulta = consulta.Where(t => t.DataVencimento <= vencimentoAte.Value);
-        }
-        if (atrasadas == true) {
-            consulta = consulta.Where(t => t.DataVencimento != null &&
-                t.DataVencimento < hoje && t.Status != StatusTarefa.Concluida);
-        }
-        else if (atrasadas == false) {
-            consulta = consulta.Where(t => t.DataVencimento == null ||
-                t.DataVencimento >= hoje || t.Status == StatusTarefa.Concluida);
-        }
+// PUT: http://localhost:5000/api/categorias
+app.MapPut("/api/categorias", ([FromBody] Categoria? cat, [FromServices] AppDataContext ctx) => {
+    
+    if (cat is null) { return Results.BadRequest("Categoria não enviada."); }
 
-        var tarefas = consulta.OrderBy(t => t.Id).ToList();
-        return Results.Ok(tarefas.Select(t => RegrasTarefa.Resposta(t, hoje)));
-    });
+    // Validações da categoria a ser atualizada
+    var erros = new Dictionary<string, string[]>();
 
-// GET /tarefas/{id:int}
-app.MapGet("/tarefas/{id:int}", (int id, AppDataContext contexto) => {
-    var tarefa = contexto.Tarefas.Find(id);
-    if (tarefa == null) {
-        return Results.NotFound();
+    if (string.IsNullOrWhiteSpace(cat.Id.ToString()) || cat.Id <= 0) {
+        erros.Add("Id", ["Id é obrigatório e deve ser um número positivo."]);
+    }
+    if (string.IsNullOrWhiteSpace(cat.Nome) || cat.Nome.Trim().Length > 150) {
+        erros.Add("Nome", ["Nome é obrigatório e deve ter até 150 caracteres."]);
     }
 
-    return Results.Ok(RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
-});
-
-// POST /tarefas
-app.MapPost("/tarefas", (TarefaRequest dados, AppDataContext contexto) => {
-    var erro = RegrasTarefa.Validar(dados, contexto, atualizacao: false);
-    if (erro != null) {
-        return Results.BadRequest(erro);
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
     }
-    var tarefa = new Tarefa { CriadaEmUtc = DateTime.UtcNow };
-    RegrasTarefa.Preencher(tarefa, dados);
-    contexto.Tarefas.Add(tarefa);
+
+    // Expressão lambda
+    Categoria? categoriaEncontrado = ctx.Categorias.FirstOrDefault(x => x.Id == cat.Id);
+    if (categoriaEncontrado is null) {
+        return Results.BadRequest("Categoria não encontrada!");
+    }
+
+    // Atualizamos os dados da categoria encontrada
+    categoriaEncontrado.Nome = cat.Nome;
+
+    // Tentamos salvar a categoria no banco, 
     try {
-        contexto.SaveChanges();
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar a categoria: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
     }
-    catch (DbUpdateException ex) when
-        (ex.InnerException is SqliteException sqlite && sqlite.SqliteExtendedErrorCode == 787) {
-        return Results.BadRequest("Categoria ou projeto deixou de existir.");
-    }
-    return Results.Created($"/tarefas/{tarefa.Id}",
-        RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
+
+    return Results.Ok("Categoria atualizada com sucesso!");
 });
 
-// PUT /tarefas/{id:int}
-app.MapPut("/tarefas/{id:int}", (
-    int id, TarefaRequest dados, AppDataContext contexto) => {
-        var tarefa = contexto.Tarefas.Find(id);
-        if (tarefa == null) {
-            return Results.NotFound();
-        }
-        var erro = RegrasTarefa.Validar(dados, contexto, atualizacao: true);
-        if (erro != null) {
-            return Results.BadRequest(erro);
-        }
-        RegrasTarefa.Preencher(tarefa, dados);
-        try {
-            contexto.SaveChanges();
-        }
-        catch (DbUpdateException ex) when
-            (ex.InnerException is SqliteException sqlite && sqlite.SqliteExtendedErrorCode == 787) {
-            return Results.BadRequest("Categoria ou projeto deixou de existir.");
-        }
-        return Results.Ok(RegrasTarefa.Resposta(tarefa, RegrasTarefa.HojeEmSaoPaulo()));
-    });
 
-// DELETE /tarefas/{id:int}
-app.MapDelete("/tarefas/{id:int}", (int id, AppDataContext contexto) => {
-    var tarefa = contexto.Tarefas.Find(id);
-    if (tarefa == null) {
-        return Results.NotFound();
+// DELETE: http://localhost:5000/api/categorias
+app.MapDelete("/api/categorias/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+    
+    if (id <= 0) { return Results.BadRequest("Id da categoria não enviado."); }
+
+    // Expressão lambda
+    Categoria? categoriaEncontrado = ctx.Categorias.FirstOrDefault(x => x.Id == id);
+    if (categoriaEncontrado is null) {
+        return Results.BadRequest("Categoria não encontrada!");
     }
-    contexto.Tarefas.Remove(tarefa);
-    contexto.SaveChanges();
-    return Results.NoContent();
+
+    ctx.Categorias.Remove(categoriaEncontrado);
+
+    // Tentamos salvar a categoria no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao remover a categoria: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Categoria removida com sucesso!");
+});
+
+
+
+
+// ============================================================================================
+// Tarefas
+// ============================================================================================
+
+
+
+
+// GET: http://localhost:5000/api/tarefas
+app.MapGet("/api/tarefas/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+
+    // Mostra a tarefa e também a categoria e o projeto associados a ela
+    var tarefa = ctx.Tarefas
+        .Include(t => t.Categoria)
+        .Include(t => t.Projeto)
+        .FirstOrDefault(t => t.Id == id);
+
+    return tarefa is null ? Results.NotFound() : Results.Ok(tarefa);
+});
+
+
+// GET: http://localhost:5000/api/tarefas
+app.MapGet("/api/tarefas", ([FromServices] AppDataContext ctx) => {
+
+    // Mostra a tarefa e também a categoria e o projeto associados a ela
+    var tarefas = ctx.Tarefas
+        .Include(t => t.Categoria)
+        .Include(t => t.Projeto)
+        .ToList();
+    
+    return tarefas is null ? Results.NotFound() : Results.Ok(tarefas);
+});
+
+
+// POST: http://localhost:5000/api/tarefas
+app.MapPost("/api/tarefas", ([FromBody] Tarefa? trf, [FromServices] AppDataContext ctx) => {
+    
+    if (trf is null) { return Results.BadRequest("Tarefa não enviada."); }
+
+    // Validações da tarefa a ser adicionada
+    var erros = new Dictionary<string, string[]>();
+
+    if (string.IsNullOrWhiteSpace(trf.Titulo) || trf.Titulo.Trim().Length > 150) {
+        erros.Add("Titulo", ["Título é obrigatório e deve ter até 150 caracteres."]);
+    }
+    if (trf.Descricao?.Length > 2000) {
+        erros.Add("Descricao", ["Descrição deve ter até 2000 caracteres."]);
+    }
+    if (!Enum.IsDefined(typeof(StatusTarefa), trf.Status)) {
+        erros.Add("Status", ["Status inválido."]);
+    }
+    if (!Enum.IsDefined(typeof(PrioridadeTarefa), trf.Prioridade)) {
+        erros.Add("Prioridade", ["Prioridade inválida."]);
+    }
+    // Se o id da categoria ou do projeto for enviado, verificamos se ele existe no banco
+    if (trf.CategoriaId.HasValue && !ctx.Categorias.Any(c => c.Id == trf.CategoriaId.Value)) {
+        erros.Add("Categoria", ["Categoria inválida."]);
+    }
+    if (trf.ProjetoId.HasValue && !ctx.Projetos.Any(p => p.Id == trf.ProjetoId.Value)) {
+        erros.Add("Projeto", ["Projeto inválido."]);
+    }
+
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
+    }
+
+    // Expressão lambda
+    Tarefa? tarefaEncontrada = ctx.Tarefas.FirstOrDefault(x => x.Titulo == trf.Titulo);
+    if (tarefaEncontrada is not null) {
+        return Results.BadRequest("Essa tarefa ja existe!");
+    }
+
+    ctx.Tarefas.Add(trf);
+
+    // Tentamos salvar a tarefa no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar a tarefa: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    // O Entity Framework Core atualiza o objeto trf com o Id gerado pelo banco
+    return Results.Created($"/api/tarefas/{trf.Id}", trf);
+});
+
+
+// PUT: http://localhost:5000/api/tarefas
+app.MapPut("/api/tarefas", ([FromBody] Tarefa? trf, [FromServices] AppDataContext ctx) => {
+    
+    if (trf is null) { return Results.BadRequest("Tarefa não enviada."); }
+
+    // Validações da tarefa a ser atualizada
+    var erros = new Dictionary<string, string[]>();
+
+    if (string.IsNullOrWhiteSpace(trf.Id.ToString()) || trf.Id <= 0) {
+        erros.Add("Id", ["Id é obrigatório e deve ser um número positivo."]);
+    }
+    if (string.IsNullOrWhiteSpace(trf.Titulo) || trf.Titulo.Trim().Length > 150) {
+        erros.Add("Titulo", ["Título é obrigatório e deve ter até 150 caracteres."]);
+    }
+    if (trf.Descricao?.Length > 2000) {
+        erros.Add("Descricao", ["Descrição deve ter até 2000 caracteres."]);
+    }
+    if (!Enum.IsDefined(typeof(StatusTarefa), trf.Status)) {
+        erros.Add("Status", ["Status inválido."]);
+    }
+    if (!Enum.IsDefined(typeof(PrioridadeTarefa), trf.Prioridade)) {
+        erros.Add("Prioridade", ["Prioridade inválida."]);
+    }
+    // Se o id da categoria ou do projeto for enviado, verificamos se ele existe no banco
+    if (trf.CategoriaId.HasValue && !ctx.Categorias.Any(c => c.Id == trf.CategoriaId.Value)) {
+        erros.Add("Categoria", ["Categoria inválida."]);
+    }
+    if (trf.ProjetoId.HasValue && !ctx.Projetos.Any(p => p.Id == trf.ProjetoId.Value)) {
+        erros.Add("Projeto", ["Projeto inválido."]);
+    }
+
+    if (erros.Count > 0) {
+        return Results.BadRequest(erros);
+    }
+
+    // Expressão lambda
+    Tarefa? tarefaEncontrada = ctx.Tarefas.FirstOrDefault(x => x.Id == trf.Id);
+    if (tarefaEncontrada is null) {
+        return Results.BadRequest("Tarefa não encontrada!");
+    }
+
+    // Atualizamos os dados da tarefa encontrada
+    tarefaEncontrada.Titulo = trf.Titulo;
+    tarefaEncontrada.Descricao = trf.Descricao;
+    tarefaEncontrada.Status = trf.Status;
+    tarefaEncontrada.Prioridade = trf.Prioridade;
+    tarefaEncontrada.Criacao = trf.Criacao;
+    tarefaEncontrada.Vencimento = trf.Vencimento;
+    tarefaEncontrada.CategoriaId = trf.CategoriaId;
+    tarefaEncontrada.ProjetoId = trf.ProjetoId;
+
+    // Tentamos salvar a tarefa no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao salvar a tarefa: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Tarefa atualizada com sucesso!");
+});
+
+
+// DELETE: http://localhost:5000/api/tarefas
+app.MapDelete("/api/tarefas/{id}", ([FromRoute] int id, [FromServices] AppDataContext ctx) => {
+    
+    if (id <= 0) { return Results.BadRequest("Id da tarefa não enviado."); }
+
+    // Expressão lambda
+    Tarefa? tarefaEncontrada = ctx.Tarefas.FirstOrDefault(x => x.Id == id);
+    if (tarefaEncontrada is null) {
+        return Results.BadRequest("Tarefa não encontrada!");
+    }
+
+    ctx.Tarefas.Remove(tarefaEncontrada);
+
+    // Tentamos salvar a tarefa no banco, 
+    try {
+        ctx.SaveChanges();
+    } 
+    // Se houver erro printamos no console e retornamos erro 500
+    catch (Exception ex) {
+        Console.WriteLine($"Erro ao remover a tarefa: {ex.Message}");
+
+        return Results.Problem(
+            title: "Erro interno",
+            detail: "Ocorreu um erro ao processar a requisição.",
+            statusCode: 500);
+    }
+
+    return Results.Ok("Tarefa removida com sucesso!");
 });
 
 app.Run();

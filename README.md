@@ -1,51 +1,177 @@
-# Task Manager
+# ✅ TaskManager
 
-API de tarefas em C# com .NET 8, Minimal API, Entity Framework Core e SQLite.
-O código segue o estilo do exemplo de Ecommerce: endpoints diretos, classes simples e validações com `if`.
+> Organização de tarefas, categorias e projetos com acompanhamento de progresso.
 
-## Como executar
+**C# · .NET 8 · Minimal API · Entity Framework Core · SQLite**
 
-Na pasta da solução:
+## 👥 Identificação
+
+| Informação | Detalhes |
+| --- | --- |
+| Disciplina | Desenvolvimento de Software Visual |
+| Curso | Ciência da Computação |
+| Integrantes | Felipe Kadanos
+|  | Marcos Jose Ferrari
+
+## 📘 Resumo
+
+O TaskManager é uma API para organizar tarefas e acompanhar o andamento de projetos. O sistema permite cadastrar tarefas com descrição, prazo, status e prioridade, além de vinculá-las opcionalmente a categorias e projetos. Os dados são armazenados em SQLite por meio do Entity Framework Core. Para apoiar o acompanhamento do trabalho, a aplicação oferece atualizações individuais de status e prioridade e um resumo por projeto com contagens de tarefas e percentual de conclusão.
+
+## 🚀 Como rodar o projeto
+
+**Pré-requisitos:** Git e SDK .NET 8 instalados. Execute os comandos abaixo no PowerShell.
+
+**1. Clone o repositório e entre na pasta da API:**
 
 ```powershell
-dotnet tool restore
+git clone https://github.com/FelipeKadanos/Task_Manager.git
+cd .\TaskManager\TaskManager.Api
+```
+
+Se a pasta `TaskManager.Api` estiver diretamente na raiz do repositório, use `cd .\TaskManager.Api` em vez do comando acima.
+
+**2. Restaure as dependências:**
+
+```powershell
 dotnet restore
-dotnet ef database update --project TaskManager.Api
-dotnet run --project TaskManager.Api --launch-profile http
 ```
 
-A API fica em `http://localhost:5000`. O banco é `TaskManager.Api/taskmanager.db`.
-As migrações existentes foram mantidas; não é necessário apagar o banco.
-
-## Onde encontrar cada parte
-
-- `TaskManager.Api/Program.cs`: configuração e endpoints de projetos, categorias e tarefas.
-- `TaskManager.Api/Models`: uma classe por entidade e os enums de status e prioridade.
-- `TaskManager.Api/Contracts`: classes com os dados recebidos nas requisições. Impedem que o cliente defina o ID ou a data de criação.
-- `TaskManager.Api/Data/AppDataContext.cs`: tabelas e regras do banco.
-- `TaskManager.Api/Services/RegrasTarefa.cs`: validação e preenchimento compartilhados entre cadastro e alteração, além do cálculo de atraso.
-- `TaskManager.Api/Requests`: exemplos para a extensão REST Client do VS Code.
-
-Comece pelo POST de categorias em `Program.cs`, depois pelo POST de tarefas.
-As operações no banco são síncronas, como no exemplo, para facilitar a leitura neste projeto de estudo.
-
-## Rotas e regras
-
-`/projetos`, `/categorias` e `/tarefas` aceitam GET e POST. Para buscar, alterar ou excluir um registro, use GET, PUT ou DELETE com `/{id}`.
-
-Uma tarefa exige título e categoria existente; o projeto é opcional. No cadastro, status e prioridade omitidos recebem Pendente (0) e Média (1). Na alteração, ambos são obrigatórios.
-
-Status: Pendente (0), Em andamento (1), Concluída (2). Prioridade: Baixa (0), Média (1), Alta (2).
-
-GET `/tarefas` aceita os filtros `status`, `prioridade`, `categoriaId`, `projetoId`, `vencimentoDe`, `vencimentoAte` e `atrasadas`. Datas usam `AAAA-MM-DD`.
-Uma tarefa fica atrasada quando seu vencimento é anterior ao dia atual em São Paulo e ela não está concluída.
-Projetos e categorias com tarefas vinculadas não podem ser excluídos.
-
-## Verificação
+**3. Confira a ferramenta do Entity Framework:**
 
 ```powershell
-dotnet build
-powershell -ExecutionPolicy Bypass -File scripts/Testar-Api.ps1
+dotnet ef --version
 ```
 
-O script usa um banco temporário e encerra a instância de teste ao terminar.
+Se ela não estiver instalada, execute:
+
+```powershell
+dotnet tool install --global dotnet-ef --version 8.0.31
+```
+
+Use uma versão 8.x da ferramenta, compatível com os pacotes do projeto.
+
+**4. Prepare o banco SQLite:**
+
+```powershell
+dotnet ef migrations list
+```
+
+Se não houver nenhuma migração, crie a primeira:
+
+```powershell
+dotnet ef migrations add CriacaoInicial
+```
+
+Em seguida, aplique as migrações. Esse comando cria o banco `TaskManager.db` e suas tabelas, caso ainda não existam:
+
+```powershell
+dotnet ef database update
+```
+
+**5. Inicie a API na porta 5000:**
+
+```powershell
+dotnet run --no-launch-profile --urls http://localhost:5000
+```
+
+Durante o desenvolvimento, use o comando abaixo no lugar de `dotnet run` para acompanhar as alterações nos arquivos:
+
+```powershell
+dotnet watch run --no-launch-profile --urls http://localhost:5000
+```
+
+Ao salvar uma alteração, o `dotnet watch` aplica as mudanças compatíveis com Hot Reload. Quando for necessário reiniciar a aplicação, a ferramenta pode solicitar confirmação no terminal. Se a API já estiver rodando com o comando anterior, encerre-a com `Ctrl+C` antes de iniciar o watch.
+
+Acesse **http://localhost:5000** para conferir a mensagem de boas-vindas. A opção `--no-launch-profile` evita que a porta configurada no perfil de execução substitua a porta desejada.
+
+Para testar pelo arquivo HTTP, configure `@baseUrl = http://localhost:5000` em [Tests/Test.http](TaskManager.Api/Tests/Test.http). Para encerrar a API, pressione `Ctrl+C` no terminal.
+
+## 🛠️ Funcionalidades
+
+- Cadastro, consulta, listagem, alteração e exclusão [ `CRUD` ] de tarefas, categorias e projetos.
+- Associação de tarefas a categorias e projetos existentes.
+- Atualização individual do status e prioridade de uma tarefa.
+- Consulta do resumo de produtividade por projeto.
+
+## 🔎 Descrição das funcionalidades
+
+### Gerenciamento de tarefas
+
+Cada tarefa possui: 
+ * Título
+ * Descrição opcional
+ * Data de criação
+ * Vencimento opcional
+ * Status 
+ * Prioridade
+
+| Valor | Status | Prioridade |
+| --- | --- | --- |
+| `0` | Pendente | Baixa |
+| `1` | Em andamento | Média |
+| `2` | Concluída | Alta |
+
+### Categorias e projetos
+
+Categorias classificam as tarefas, enquanto projetos agrupam atividades relacionadas. A exclusão de uma categoria ou projeto está configurada para remover o vínculo, preservando a tarefa.
+
+### Atualizações individuais
+
+Os endpoints abaixo permitem alterar somente o status ou a prioridade, sem reenviar os demais dados da tarefa:
+
+```http
+PATCH /api/tarefas/{id}/status
+PATCH /api/tarefas/{id}/prioridade
+```
+
+Envie `Content-Type: application/json` e o número desejado no corpo. Por exemplo, `2` status concluído ou prioridade alta, conforme o endpoint.
+
+### Resumo de produtividade
+
+```http
+GET /api/projetos/{id}/resumo
+```
+
+O resumo considera apenas as tarefas vinculadas ao projeto consultado. Tarefas de alta prioridade são contadas independentemente do status. Projetos sem tarefas retornam os indicadores zerados.
+
+Exemplo de resposta:
+
+```json
+{
+  "projetoId": 1,
+  "projetoNome": "Projeto da disciplina",
+  "totalTarefas": 3,
+  "pendentes": 1,
+  "emAndamento": 1,
+  "concluidas": 1,
+  "altaPrioridade": 1,
+  "percentualConclusao": 33.33
+}
+```
+
+## ▶️ Execução e testes
+
+Consulte o [guia de instruções](Instructions.md) para os comandos de criação do projeto, instalação dos pacotes, preparação do banco e execução da API.
+
+As requisições para testes manuais estão em [Tests/Test.http](TaskManager.Api/Tests/Test.http). Execute-as em ordem pela extensão REST Client do VS Code, utilizando um banco de teste e a URL exibida no terminal. Os cadastros precisam ser executados antes das requisições que utilizam seus IDs.
+
+## 🔗 Repositório
+
+**[Link do repositório:](https://github.com/FelipeKadanos/Task_Manager)** [ `https://github.com/FelipeKadanos/Task_Manager` ]
+
+## 🤖 Uso de IA
+
+- **Ferramenta utilizada:** Codex, da OpenAI.
+- **Formas de uso:** 
+  * Elaboração do projeto:
+    * Elaboração das funcionalidades
+    * Elaboração do banco de dados e relacionamentos
+  * Elaboração e organização deste README.
+  * Criação dos `Test/Test.http`
+  * Criação do `.gitignore`
+  * Ajuste na ordem do json de resposta
+- **Exemplo de solicitação:** “Crie o README da maneira que a documentação do trabalho pede. Ele pode ser simples e direto, mas deve ser bonito.”
+- **Revisões realizadas pela equipe:** 
+  * Execução dos testes
+  * Conferencia dos codigos escritos para o banco de dados
+  * Ajustes no escopo inicial do projeto

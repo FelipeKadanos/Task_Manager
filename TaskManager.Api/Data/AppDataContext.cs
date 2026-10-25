@@ -1,35 +1,30 @@
 using Microsoft.EntityFrameworkCore;
-using TaskManager.Api.Models;
 
-namespace TaskManager.Api.Data;
-
-public class AppDataContext : DbContext {
-    public AppDataContext(DbContextOptions<AppDataContext> options) : base(options) {
-    }
-
-    public DbSet<Projeto> Projetos { get; set; }
-    public DbSet<Categoria> Categorias { get; set; }
+public class AppDataContext : DbContext{
     public DbSet<Tarefa> Tarefas { get; set; }
+    public DbSet<Categoria> Categorias { get; set; }
+    public DbSet<Projeto> Projetos { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) {
-        modelBuilder.Entity<Projeto>().Property(p => p.Nome).IsRequired().HasMaxLength(100);
-        modelBuilder.Entity<Categoria>().Property(c => c.Nome).IsRequired().HasMaxLength(100);
-
-        var tarefa = modelBuilder.Entity<Tarefa>();
-        tarefa.Property(t => t.Titulo).IsRequired().HasMaxLength(150);
-        tarefa.Property(t => t.Descricao).HasMaxLength(2000);
-
-        tarefa.Property(t => t.CriadaEmUtc).HasConversion(
-            valor => valor,
-            valor => DateTime.SpecifyKind(valor, DateTimeKind.Utc)
-        );
-
-        tarefa.HasOne<Categoria>().WithMany().HasForeignKey(t => t.CategoriaId).OnDelete(DeleteBehavior.Restrict);
-        tarefa.HasOne<Projeto>().WithMany().HasForeignKey(t => t.ProjetoId).OnDelete(DeleteBehavior.Restrict);
-
-        tarefa.ToTable("Tarefas", tabela => {
-            tabela.HasCheckConstraint("CK_Tarefas_Status", "Status IN (0, 1, 2)");
-            tabela.HasCheckConstraint("CK_Tarefas_Prioridade", "Prioridade IN (0, 1, 2)");
-        });
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
+        optionsBuilder.UseSqlite("Data Source=TaskManager.db");
     }
+
+    // Configurações de relacionamento entre as entidades 
+    protected override void OnModelCreating(ModelBuilder modelBuilder) {
+
+        // Uma tarefa pode ter uma categoria, mas uma categoria pode ter várias tarefas.
+        modelBuilder.Entity<Tarefa>()
+            .HasOne(t => t.Categoria)
+            .WithMany()
+            .HasForeignKey(t => t.CategoriaId)
+            .OnDelete(DeleteBehavior.SetNull); // Se a categoria for deletada, o campo CategoriaId fica null
+
+        // Uma tarefa pode ter um projeto, mas um projeto pode ter várias tarefas.
+        modelBuilder.Entity<Tarefa>()
+            .HasOne(t => t.Projeto)
+            .WithMany()
+            .HasForeignKey(t => t.ProjetoId)
+            .OnDelete(DeleteBehavior.SetNull); // Se o projeto for deletado, o campo ProjetoId fica null
+}
+
 }
