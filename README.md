@@ -1,8 +1,6 @@
 # ✅ TaskManager
 
-> Organização de tarefas, categorias e projetos com acompanhamento de progresso.
-
-**C# · .NET 8 · Minimal API · Entity Framework Core · SQLite**
+>**C# · .NET 8 · Minimal API · Entity Framework Core · SQLite**
 
 ## 👥 Identificação
 
@@ -15,7 +13,7 @@
 
 ## 📘 Resumo
 
-O TaskManager é uma API para organizar tarefas e acompanhar o andamento de projetos. O sistema permite cadastrar tarefas com descrição, prazo, status e prioridade, além de vinculá-las opcionalmente a categorias e projetos. Os dados são armazenados em SQLite por meio do Entity Framework Core. Para apoiar o acompanhamento do trabalho, a aplicação oferece atualizações individuais de status e prioridade e um resumo por projeto com contagens de tarefas e percentual de conclusão.
+O TaskManager ferramenta para organizar tarefas e acompanhar o andamento de projetos. O sistema permite cadastrar tarefas com descrição, prazo, status e prioridade, além de vinculá-las opcionalmente a categorias e projetos.
 
 ## 🚀 Como rodar o projeto
 
@@ -27,8 +25,6 @@ O TaskManager é uma API para organizar tarefas e acompanhar o andamento de proj
 git clone https://github.com/FelipeKadanos/Task_Manager.git
 cd .\TaskManager\TaskManager.Api
 ```
-
-Se a pasta `TaskManager.Api` estiver diretamente na raiz do repositório, use `cd .\TaskManager.Api` em vez do comando acima.
 
 **2. Restaure as dependências:**
 
@@ -74,24 +70,30 @@ dotnet ef database update
 dotnet run --no-launch-profile --urls http://localhost:5000
 ```
 
-Durante o desenvolvimento, use o comando abaixo no lugar de `dotnet run` para acompanhar as alterações nos arquivos:
+Durante o desenvolvimento:
 
 ```powershell
 dotnet watch run --no-launch-profile --urls http://localhost:5000
 ```
-
-Ao salvar uma alteração, o `dotnet watch` aplica as mudanças compatíveis com Hot Reload. Quando for necessário reiniciar a aplicação, a ferramenta pode solicitar confirmação no terminal. Se a API já estiver rodando com o comando anterior, encerre-a com `Ctrl+C` antes de iniciar o watch.
+Ao salvar uma alteração, o `dotnet watch` aplica as mudanças compatíveis com Hot Reload. Quando for necessário reiniciar a aplicação, a ferramenta pode solicitar confirmação no terminal.
 
 Acesse **http://localhost:5000** para conferir a mensagem de boas-vindas. A opção `--no-launch-profile` evita que a porta configurada no perfil de execução substitua a porta desejada.
 
 Para testar pelo arquivo HTTP, configure `@baseUrl = http://localhost:5000` em [Tests/Test.http](TaskManager.Api/Tests/Test.http). Para encerrar a API, pressione `Ctrl+C` no terminal.
 
-## 🛠️ Funcionalidades
+---
+### Configurar o React
 
-- Cadastro, consulta, listagem, alteração e exclusão [ `CRUD` ] de tarefas, categorias e projetos.
-- Associação de tarefas a categorias e projetos existentes.
-- Atualização individual do status e prioridade de uma tarefa.
-- Consulta do resumo de produtividade por projeto.
+**1. Entrando na pasta do front-end**
+```powershell
+cd ..
+cd .\task_manager.front
+```
+
+**2. Restaurando dependencias**
+```powershell
+npm i
+```
 
 ## 🔎 Descrição das funcionalidades
 
