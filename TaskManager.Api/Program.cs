@@ -3,7 +3,18 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDataContext>(); // Carrega o contexto de dados para o banco de dados
+
+// Precisamos adicionar essa perte do codigo para conseguirmos acessar no front-end
+builder.Services.AddCors(options => {
+    options.AddPolicy("AcessoTotal", policy => {
+        policy.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
+app.UseCors("AcessoTotal");
 
 // GET: http://localhost:5000/
 app.MapGet("/", () => "Bem-vindo a TaskManager API!");

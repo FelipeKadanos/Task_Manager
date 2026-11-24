@@ -1,8 +1,6 @@
 # ✅ TaskManager
 
-> Organização de tarefas, categorias e projetos com acompanhamento de progresso.
-
-**C# · .NET 8 · Minimal API · Entity Framework Core · SQLite**
+>**C# · .NET 8 · Minimal API · Entity Framework Core · SQLite**
 
 ## 👥 Identificação
 
@@ -15,83 +13,37 @@
 
 ## 📘 Resumo
 
-O TaskManager é uma API para organizar tarefas e acompanhar o andamento de projetos. O sistema permite cadastrar tarefas com descrição, prazo, status e prioridade, além de vinculá-las opcionalmente a categorias e projetos. Os dados são armazenados em SQLite por meio do Entity Framework Core. Para apoiar o acompanhamento do trabalho, a aplicação oferece atualizações individuais de status e prioridade e um resumo por projeto com contagens de tarefas e percentual de conclusão.
+O TaskManager ferramenta para organizar tarefas e acompanhar o andamento de projetos. O sistema permite cadastrar tarefas com descrição, prazo, status e prioridade, além de vinculá-las opcionalmente a categorias e projetos.
 
 ## 🚀 Como rodar o projeto
 
-**Pré-requisitos:** Git e SDK .NET 8 instalados. Execute os comandos abaixo no PowerShell.
+**Pré-requisitos:** Git, SDK .NET 8, Node.js com npm e Bash. No Windows, use o Git Bash.
 
-**1. Clone o repositório e entre na pasta da API:**
+Clone o repositório e entre na raiz do projeto.
 
-```powershell
+```bash
 git clone https://github.com/FelipeKadanos/Task_Manager.git
-cd .\TaskManager\TaskManager.Api
+cd Task_Manager
 ```
 
-Se a pasta `TaskManager.Api` estiver diretamente na raiz do repositório, use `cd .\TaskManager.Api` em vez do comando acima.
+Se ainda não tiver a ferramenta do Entity Framework 8, instale-a uma vez.
 
-**2. Restaure as dependências:**
-
-```powershell
-dotnet restore
-```
-
-**3. Confira a ferramenta do Entity Framework:**
-
-```powershell
-dotnet ef --version
-```
-
-Se ela não estiver instalada, execute:
-
-```powershell
+```bash
 dotnet tool install --global dotnet-ef --version 8.0.31
 ```
 
-Use uma versão 8.x da ferramenta, compatível com os pacotes do projeto.
+Na raiz do projeto, execute o script.
 
-**4. Prepare o banco SQLite:**
-
-```powershell
-dotnet ef migrations list
+```bash
+bash start.sh
 ```
 
-Se não houver nenhuma migração, crie a primeira:
+O script aplica as migrações do SQLite, instala as dependências do React no primeiro uso e inicia a API e o front-end.
 
-```powershell
-dotnet ef migrations add CriacaoInicial
-```
+- React em **http://localhost:3000**
+- API em **http://localhost:5000**
 
-Em seguida, aplique as migrações. Esse comando cria o banco `TaskManager.db` e suas tabelas, caso ainda não existam:
-
-```powershell
-dotnet ef database update
-```
-
-**5. Inicie a API na porta 5000:**
-
-```powershell
-dotnet run --no-launch-profile --urls http://localhost:5000
-```
-
-Durante o desenvolvimento, use o comando abaixo no lugar de `dotnet run` para acompanhar as alterações nos arquivos:
-
-```powershell
-dotnet watch run --no-launch-profile --urls http://localhost:5000
-```
-
-Ao salvar uma alteração, o `dotnet watch` aplica as mudanças compatíveis com Hot Reload. Quando for necessário reiniciar a aplicação, a ferramenta pode solicitar confirmação no terminal. Se a API já estiver rodando com o comando anterior, encerre-a com `Ctrl+C` antes de iniciar o watch.
-
-Acesse **http://localhost:5000** para conferir a mensagem de boas-vindas. A opção `--no-launch-profile` evita que a porta configurada no perfil de execução substitua a porta desejada.
-
-Para testar pelo arquivo HTTP, configure `@baseUrl = http://localhost:5000` em [Tests/Test.http](TaskManager.Api/Tests/Test.http). Para encerrar a API, pressione `Ctrl+C` no terminal.
-
-## 🛠️ Funcionalidades
-
-- Cadastro, consulta, listagem, alteração e exclusão [ `CRUD` ] de tarefas, categorias e projetos.
-- Associação de tarefas a categorias e projetos existentes.
-- Atualização individual do status e prioridade de uma tarefa.
-- Consulta do resumo de produtividade por projeto.
+Pressione `Ctrl+C` no terminal para encerrar.
 
 ## 🔎 Descrição das funcionalidades
 
@@ -151,7 +103,7 @@ Exemplo de resposta:
 
 ## ▶️ Execução e testes
 
-Consulte o [guia de instruções](Instructions.md) para os comandos de criação do projeto, instalação dos pacotes, preparação do banco e execução da API.
+Consulte o [guia de instruções](Instructions.md) para recriar o projeto do zero.
 
 As requisições para testes manuais estão em [Tests/Test.http](TaskManager.Api/Tests/Test.http). Execute-as em ordem pela extensão REST Client do VS Code, utilizando um banco de teste e a URL exibida no terminal. Os cadastros precisam ser executados antes das requisições que utilizam seus IDs.
 
