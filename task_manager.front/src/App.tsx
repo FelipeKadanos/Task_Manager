@@ -1,15 +1,7 @@
-import React from 'react';
-import ModelComponent from './ModelComponent';
-import ListarTarefa from './components/ListarTarefas';
+import QuadroKanban from "./components/QuadroKanban";
 
 function App() {
-  return (
-    <div>
-      <h1>Task Manager</h1>
-      {/* <ModelComponent /> */}
-      <ListarTarefa />
-    </div>
-  );
+  return <QuadroKanban />;
 }
 
 export default App;
