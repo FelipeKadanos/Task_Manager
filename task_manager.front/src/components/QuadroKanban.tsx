@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import BarraKanban from "./BarraKanban";
 import ColunaKanban from "./ColunaKanban";
 import FormularioKanban from "./FormularioKanban";
+import ResumoProjeto from "./ResumoProjeto";
 import { Cadastro, Grupo, Tarefa, Visao, colunas, consultar, enviar } from "./KanbanDados";
 
 interface Dados {
@@ -18,6 +19,8 @@ function QuadroKanban() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [ocupadas, setOcupadas] = useState<number[]>([]);
+  const [edicao, setEdicao] = useState<Tarefa | null>(null);
+  const [resumoId, setResumoId] = useState<number | null>(null);
   const bloqueado = carregando || ocupadas.length > 0;
   const [, grupo, acao, tipo] = rota.split("/");
   const visao: Visao = grupo === "projetos" ? "projetos" : "categorias";
@@ -81,6 +84,26 @@ function QuadroKanban() {
     }
   };
 
+  const excluirTarefa = async (id: number) => {
+    const tarefa = dados.tarefas.find(item => item.id === id);
+    if (carregando || !tarefa || ocupadas.includes(id)) return;
+    if (!window.confirm("Excluir a tarefa \"" + tarefa.titulo + "\"?")) return;
+
+    setOcupadas(ids => [...ids, id]);
+    setErro("");
+    try {
+      await consultar<string>("tarefas/" + id, { method: "DELETE" });
+      setDados(atual => ({
+        ...atual,
+        tarefas: atual.tarefas.filter(item => item.id !== id),
+      }));
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível excluir a tarefa.");
+    } finally {
+      setOcupadas(ids => ids.filter(item => item !== id));
+    }
+  };
+
   return (
     <main className="kanban-fundo">
       <div className="kanban-quadro">
@@ -113,6 +136,9 @@ function QuadroKanban() {
               dadosCarregados = {dados !== dadosIniciais}
               ocupadas = {ocupadas}
               moverTarefa = {mudarStatus}
+              editarTarefa = {setEdicao}
+              excluirTarefa = {excluirTarefa}
+              abrirResumo = {setResumoId}
             />
           ))}
         </div>
@@ -130,6 +156,29 @@ function QuadroKanban() {
               }
               setCarregando(true);
             }}
+          />
+        )}
+
+        {edicao && (
+          <FormularioKanban
+            key = {"editar-" + edicao.id}
+            tipo = "tarefas"
+            edicao = {edicao}
+            categorias = {dados.categorias}
+            projetos = {dados.projetos}
+            fechar = {() => setEdicao(null)}
+            aoSalvar = {() => {
+              setEdicao(null);
+              setCarregando(true);
+            }}
+          />
+        )}
+
+        {resumoId !== null && (
+          <ResumoProjeto
+            key = {resumoId}
+            projetoId = {resumoId}
+            fechar = {() => setResumoId(null)}
           />
         )}
       </div>
@@ -162,7 +211,7 @@ function QuadroKanban() {
 
         .kanban-colunas {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 1rem;
         }
 
@@ -205,7 +254,7 @@ function QuadroKanban() {
           color: #742f2f;
         }
 
-        @media (max-width: 620px) {
+        @media (max-width: 980px) {
           .kanban-colunas {
             grid-template-columns: minmax(0, 1fr);
           }

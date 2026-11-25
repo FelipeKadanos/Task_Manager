@@ -4,14 +4,22 @@ interface Props {
   tarefa: Tarefa;
   ocupada: boolean;
   mudarStatus: (id: number, status: number) => void;
+  editar: (tarefa: Tarefa) => void;
+  excluir: (id: number) => void;
 }
 
 const prioridades = ["Baixa", "Média", "Alta"];
 
-function CartaoTarefa({ tarefa, ocupada, mudarStatus }: Props) {
+function formatarData(data: string) {
+  const [ano, mes, dia] = data.slice(0, 10).split("-");
+  return dia + "/" + mes + "/" + ano;
+}
+
+function CartaoTarefa({ tarefa, ocupada, mudarStatus, editar, excluir }: Props) {
   return (
     <article
       className="kanban-cartao"
+      data-status = {tarefa.status}
       draggable = {!ocupada}
       onDragStart = {evento => {
         evento.dataTransfer.setData("application/x-task-manager", String(tarefa.id));
@@ -23,11 +31,20 @@ function CartaoTarefa({ tarefa, ocupada, mudarStatus }: Props) {
       </span>
       <h4>{tarefa.titulo}</h4>
       {tarefa.descricao && <p>{tarefa.descricao}</p>}
+      {tarefa.vencimento && <small className="kanban-vencimento">Vence em {formatarData(tarefa.vencimento)}</small>}
       <div className="kanban-cartao-acoes">
-        <button disabled = {ocupada} onClick = {() => mudarStatus(tarefa.id, tarefa.status === 0 ? 1 : 0)}>
-          {tarefa.status === 0 ? "Iniciar" : "Voltar para pendente"}
-        </button>
-        <button disabled = {ocupada} onClick = {() => mudarStatus(tarefa.id, 2)}>Concluir</button>
+        {tarefa.status === 2 ? (
+          <button disabled = {ocupada} onClick = {() => mudarStatus(tarefa.id, 0)}>Reabrir</button>
+        ) : (
+          <>
+            <button disabled = {ocupada} onClick = {() => mudarStatus(tarefa.id, tarefa.status === 0 ? 1 : 0)}>
+              {tarefa.status === 0 ? "Iniciar" : "Voltar para pendente"}
+            </button>
+            <button disabled = {ocupada} onClick = {() => mudarStatus(tarefa.id, 2)}>Concluir</button>
+          </>
+        )}
+        <button disabled = {ocupada} onClick = {() => editar(tarefa)}>Editar</button>
+        <button className="kanban-perigo" disabled = {ocupada} onClick = {() => excluir(tarefa.id)}>Excluir</button>
       </div>
       <style>{`
         .kanban-cartao {
@@ -44,6 +61,11 @@ function CartaoTarefa({ tarefa, ocupada, mudarStatus }: Props) {
           cursor: grab;
         }
 
+        .kanban-cartao[data-status="2"] h4 {
+          text-decoration: line-through;
+          opacity: .7;
+        }
+
         .kanban-cartao h4 {
           margin: .45rem 0;
         }
@@ -52,6 +74,12 @@ function CartaoTarefa({ tarefa, ocupada, mudarStatus }: Props) {
           margin: 0;
           color: var(--kanban-muted);
           white-space: pre-wrap;
+        }
+
+        .kanban-vencimento {
+          display: block;
+          margin-top: .5rem;
+          color: var(--kanban-muted);
         }
 
         .kanban-prioridade {
@@ -75,6 +103,10 @@ function CartaoTarefa({ tarefa, ocupada, mudarStatus }: Props) {
         .kanban-cartao-acoes button {
           font-size: .78rem;
           padding: .35rem .55rem;
+        }
+
+        .kanban-cartao-acoes button.kanban-perigo {
+          color: #742f2f;
         }
       `}</style>
     </article>

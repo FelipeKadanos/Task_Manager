@@ -6,11 +6,24 @@ export interface Grupo {
 export interface Tarefa {
   id: number;
   titulo: string;
-  descricao?: string;
+  descricao?: string | null;
   status: number;
   prioridade: number;
   categoriaId: number | null;
   projetoId: number | null;
+  criacao?: string;
+  vencimento?: string | null;
+}
+
+export interface Resumo {
+  projetoId: number;
+  projetoNome: string;
+  totalTarefas: number;
+  pendentes: number;
+  emAndamento: number;
+  concluidas: number;
+  altaPrioridade: number;
+  percentualConclusao: number;
 }
 
 export type Visao = "categorias" | "projetos";
@@ -19,6 +32,7 @@ export type Cadastro = Visao | "tarefas";
 export const colunas = [
   { id: 0, nome: "Pendente" },
   { id: 1, nome: "Em andamento" },
+  { id: 2, nome: "Concluída" },
 ];
 
 export async function consultar<T>(rota: string, opcoes?: RequestInit): Promise<T> {
