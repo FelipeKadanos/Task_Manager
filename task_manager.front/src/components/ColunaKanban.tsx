@@ -13,6 +13,9 @@ interface Props {
   dadosCarregados: boolean;
   ocupadas: number[];
   moverTarefa: (id: number, status: number) => void;
+  editarTarefa: (tarefa: Tarefa) => void;
+  excluirTarefa: (id: number) => void;
+  abrirResumo: (projetoId: number) => void;
 }
 
 function ColunaKanban({
@@ -26,6 +29,9 @@ function ColunaKanban({
   dadosCarregados,
   ocupadas,
   moverTarefa,
+  editarTarefa,
+  excluirTarefa,
+  abrirResumo,
 }: Props) {
   const porProjeto = visao === "projetos";
   const grupos = porProjeto ? [...projetos, { id: null, nome: "Sem projeto" }] : [{ id: null, nome: "" }];
@@ -53,6 +59,7 @@ function ColunaKanban({
       <div className="kanban-coluna-conteudo">
         {grupos.map(grupo => {
           const tarefasDoGrupo = porProjeto ? tarefas.filter(tarefa => tarefa.projetoId === grupo.id) : tarefas;
+          const projetoId = grupo.id;
           if (porProjeto && grupo.id === null && !tarefasDoGrupo.length) return null;
 
           const conteudo = gruposCategorias.map(categoria => {
@@ -69,6 +76,8 @@ function ColunaKanban({
                       tarefa = {tarefa}
                       ocupada = {carregando || ocupadas.includes(tarefa.id)}
                       mudarStatus = {moverTarefa}
+                      editar = {editarTarefa}
+                      excluir = {excluirTarefa}
                     />
                   )) : <p>Sem tarefas neste status.</p>}
                 </div>
@@ -80,7 +89,12 @@ function ColunaKanban({
 
           return (
             <section className="kanban-grupo kanban-projeto" key = {grupo.id ?? "sem-projeto"}>
-              <h3>{grupo.nome}</h3>
+              <div className="kanban-projeto-titulo">
+                <h3>{grupo.nome}</h3>
+                {projetoId !== null && status === 0 && (
+                  <button onClick = {() => abrirResumo(projetoId)}>Resumo</button>
+                )}
+              </div>
               <div className="kanban-grupo-conteudo">
                 {tarefasDoGrupo.length ? conteudo : <p>Sem tarefas neste status.</p>}
               </div>
@@ -124,6 +138,10 @@ function ColunaKanban({
           background: #387e62;
         }
 
+        .kanban-indicador[data-status="2"] {
+          background: #3b6ea5;
+        }
+
         .kanban-contagem {
           margin-left: auto;
           padding: .2rem .5rem;
@@ -153,6 +171,24 @@ function ColunaKanban({
 
         .kanban-projeto {
           background: #bbecd49e;
+        }
+
+        .kanban-projeto-titulo {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: .5rem;
+          margin: 0 0 .55rem;
+        }
+
+        .kanban-projeto-titulo h3 {
+          margin: 0;
+          font-size: .95rem;
+        }
+
+        .kanban-projeto-titulo button {
+          font-size: .78rem;
+          padding: .3rem .55rem;
         }
 
         .kanban-grupo > h3 {

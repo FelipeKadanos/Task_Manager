@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Cadastro, Grupo, enviar } from "./KanbanDados";
+import { Cadastro, Grupo, Tarefa, enviar } from "./KanbanDados";
 
 interface Props {
   tipo: Cadastro;
+  edicao?: Tarefa;
   categorias: Grupo[];
   projetos: Grupo[];
   fechar: () => void;
@@ -15,7 +16,7 @@ const titulos = {
   categorias: "Incluir categoria",
 };
 
-function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Props) {
+function FormularioKanban({ tipo, edicao, categorias, projetos, fechar, aoSalvar }: Props) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -37,10 +38,11 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
     }
 
     const dados = tarefa ? {
+      ...(edicao ? { id: edicao.id, criacao: edicao.criacao } : {}),
       titulo: nome,
       descricao: String(campos.get("descricao")).trim() || null,
       prioridade: Number(campos.get("prioridade")),
-      status: 0,
+      status: edicao ? Number(campos.get("status")) : 0,
       categoriaId: Number(campos.get("categoria")) || null,
       projetoId: Number(campos.get("projeto")) || null,
       vencimento: campos.get("vencimento") || null,
@@ -49,7 +51,7 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
     setErro("");
     setSalvando(true);
     try {
-      await enviar(tipo, "POST", dados);
+      await enviar(tipo, edicao ? "PUT" : "POST", dados);
       aoSalvar();
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível salvar.");
@@ -68,23 +70,23 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
       }}
     >
       <form onSubmit = {salvar}>
-        <h2 id="kanban-cadastro-titulo">{titulos[tipo]}</h2>
+        <h2 id="kanban-cadastro-titulo">{edicao ? "Editar tarefa" : titulos[tipo]}</h2>
         <label>
           {tarefa ? "Título" : "Nome"}
-          <input name="nome" maxLength = {150} required autoFocus />
+          <input name="nome" maxLength = {150} defaultValue = {edicao?.titulo ?? ""} required autoFocus />
         </label>
 
         {tarefa && (
           <>
             <label>
               Descrição
-              <textarea name="descricao" rows = {3} maxLength = {2000} />
+              <textarea name="descricao" rows = {3} maxLength = {2000} defaultValue = {edicao?.descricao ?? ""} />
             </label>
 
             <div className="kanban-campos">
               <label>
                 Categoria
-                <select name="categoria">
+                <select name="categoria" defaultValue = {edicao?.categoriaId ?? ""}>
                   <option value="">Sem categoria</option>
                   {categorias.map(categoria => (
                     <option key = {categoria.id} value = {categoria.id}>{categoria.nome}</option>
@@ -93,7 +95,7 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
               </label>
               <label>
                 Projeto
-                <select name="projeto">
+                <select name="projeto" defaultValue = {edicao?.projetoId ?? ""}>
                   <option value="">Sem projeto</option>
                   {projetos.map(projeto => (
                     <option key = {projeto.id} value = {projeto.id}>{projeto.nome}</option>
@@ -102,7 +104,7 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
               </label>
               <label>
                 Prioridade
-                <select name="prioridade" defaultValue="1">
+                <select name="prioridade" defaultValue = {edicao?.prioridade ?? 1}>
                   <option value="0">Baixa</option>
                   <option value="1">Média</option>
                   <option value="2">Alta</option>
@@ -110,8 +112,18 @@ function FormularioKanban({ tipo, categorias, projetos, fechar, aoSalvar }: Prop
               </label>
               <label>
                 Vencimento
-                <input type="date" name="vencimento" />
+                <input type="date" name="vencimento" defaultValue = {edicao?.vencimento?.slice(0, 10) ?? ""} />
               </label>
+              {edicao && (
+                <label>
+                  Status
+                  <select name="status" defaultValue = {edicao.status}>
+                    <option value="0">Pendente</option>
+                    <option value="1">Em andamento</option>
+                    <option value="2">Concluída</option>
+                  </select>
+                </label>
+              )}
             </div>
           </>
         )}
